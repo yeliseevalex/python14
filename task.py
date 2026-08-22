@@ -356,9 +356,11 @@ class Order:
 orders = []
 money = 0
 completed_orders = 0
+active_barista = 0
 
 money_lock = threading.Lock()
 completed_orders_lock = threading.Lock()
+active_baristas_lock = threading.Lock()
 
 condition = threading.Condition()
 
@@ -395,6 +397,14 @@ def cashier():
         Order("Круасан", 5),
         Order("Капучино", 7),
         Order("Лате", 6),
+        Order("Капучино", 7),
+        Order("Лате", 6),
+        Order("Сендвіч", 10),
+        Order("Американо", 5),
+        Order("Чізкейк", 8),
+        Order("Круасан", 5),
+        Order("Капучино", 7),
+        Order("Лате", 6),
     ]
 
     print(f"[Cashier] Start take orders\n")
@@ -413,9 +423,13 @@ def cashier():
     print(f"[Cashier] Finish take orders\n")
 
 def barista(name):
+    global active_barista
     print(f"[{name}] Waiting for ready coffe machine...")
     coffe_machine_ready.wait()
     print(f"[{name} ready!")
+
+    with active_baristas_lock:
+        active_barista += 1
 
     while True:
         with condition:
@@ -429,10 +443,14 @@ def barista(name):
             order = orders.pop(0)
 
             print(f"[{name}] Get {order.name}")
+            with active_baristas_lock:
+                active_barista -= 1
 
         print(f"[{name}] Cooked {order.name}...")
         time.sleep(random.uniform(1, 2))
         print(f"[{name}] {order.name} ready!")
+        with active_baristas_lock:
+            active_barista += 1
         increment_completed_orders()
 
 
@@ -444,6 +462,37 @@ def finished_discount():
     print("="*50)
     print("\nFinished discount...")
     print("=" * 50)
+
+def monitor_cafe():
+    '''
+    [Monitor]
+    Виручка: 42 ₾
+    Замовлень у черзі: 2
+    Активних барист: 3
+    '''
+    while not shutdown_event.is_set():
+        with money_lock:
+            current_money = money
+
+        with completed_orders_lock:
+            current_completed = completed_orders
+
+        with condition:
+            current_orders = len(orders)
+
+        with active_baristas_lock:
+            current_active_barista = active_barista
+
+        print(f''' 
+            --------------[Monitor]--------------
+            Виручка: {current_money}
+            Замовлень у черзі: {current_orders}
+            Виконано замовлень: {current_completed}
+            Активних барист: {active_barista}
+            -------------------------------------\n
+            ''')
+
+        shutdown_event.wait(1)
 
 
 cashier_finished = False
@@ -461,15 +510,20 @@ def cashier_worker():
     mark_cashier_finished()
 
 def main():
+    global active_barista
     cashier_thread = threading.Thread(target=cashier_worker)
 
     barista_threads = []
-    for i in range(1, 4):
+    for i in range(1, 3):
         barista_threads.append(threading.Thread(target=barista, args=(f"Barista-{i}",)))
 
     manager_thread = threading.Thread(target=manager, args=())
 
     discount_timer = threading.Timer(7, finished_discount)
+
+    monitor_thread = threading.Thread(target=monitor_cafe, daemon=True)
+
+    monitor_thread.start()
 
     print("Start work...")
     manager_thread.start()
@@ -489,6 +543,8 @@ def main():
     for thread in barista_threads:
         thread.join()
     print("[Main] Barista finished!")
+    with active_baristas_lock:
+        active_barista = 0
 
     with money_lock:
         final_money = money
@@ -499,5 +555,7 @@ def main():
     print(f"Final Money is {final_money}")
     print(f"Total completed orders is {final_completed_orders}")
     print("END!")
+    time.sleep(1)
+    shutdown_event.set()
 
 main()
