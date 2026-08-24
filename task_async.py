@@ -744,7 +744,7 @@ balance = 0
 
 completed_orders = 0
 
-canceled_orders = 0
+failed_orders = 0
 
 all_orders = []
 
@@ -792,6 +792,73 @@ async def deliver_order(order, courier_name):
         raise
     print(f"[{courier_name}] Order #{order_id}, done!!")
 
+async def process_order(order, courier_name):
+    global completed_orders
+    global failed_orders
+
+    order_id = order["id"]
+    print_separator()
+    print(f"[{courier_name}] Get order #{order_id}")
+
+    payment_success = await process_payment(order)
+
+    if not payment_success:
+        failed_orders += 1
+        print(f"[{courier_name}] Order #{order_id} doesnt success payment")
+        return
+
+    await prepare_order(order)
+
+    print(f'[{courier_name}] Order #{order_id} checking GPS!!!')
+    await gps_ready.wait()
+
+    print(f'[{courier_name}] Order #{order_id} GPS ready!!!')
+
+    try:
+        await asyncio.wait_for(
+            deliver_order(order, courier_name),
+            timeout=5
+        )
+        completed_orders += 1
+
+    except asyncio.TimeoutError:
+        failed_orders += 1
+        print(f"[{courier_name}] Order #{order_id} timed out")
+
+async def dispatcher():
+    foods = [
+        ("Піца", 25),
+        ("Бургер", 18),
+        ("Суші", 32),
+        ("Паста", 22),
+        ("Салат", 15),
+    ]
+    print_separator()
+    print(f"[Dispatcher] Start working...")
+    print_separator()
+
+    for order_id in range(1, TOTAL_ORDERS + 1):
+        food, price = random.choice(foods)
+
+        order = {
+            "id": order_id,
+            "food": food,
+            "price": price
+        }
+
+        all_orders.append(order)
+
+        print(f"[Dispatcher] add order #{order_id} ({food} - {price}$)")
+
+        await orders_queue.put(order)
+
+        await asyncio.sleep(random.uniform(0.2, 0.7))
+
+    print_separator()
+    print(f"[Dispatcher] End working!!!]")
+    print_separator()
+
+
 async def courier(name):
     print(f"[name] Start working!")
     try:
@@ -806,11 +873,75 @@ async def courier(name):
         print(f"[{name}] end working")
         raise
 
+async def gps_system():
+    print(f"[GPS] Starting...")
+    await asyncio.sleep(2)
+    print(f"[GPS] Connecting....")
+    await asyncio.sleep(1)
+    print(f"[GPS] Ready!")
+    gps_ready.set()
+
+async def monitor():
+    """```
+        [Monitor]
+        Замовлень у черзі: 4
+        Активних кур'єрів: 3
+        Баланс: 86 ₾
+        Виконано замовлень: 5"""
+
+    global balance
+
+    try:
+        while True:
+            async with balance_lock:
+                current_balance = balance
+
+            print()
+            print(f"======== MONITOR =======")
+            print(f"Замовлень у черзі: {orders_queue.qsize()}")
+            print(f"Баланс: {current_balance}")
+            print(f"Виконано замовлень: {completed_orders}")
+            print(f"Не виконано замовлень: {failed_orders}")
+            print("=========================")
+            print()
+
+            await asyncio.sleep(2)
+
+    except asyncio.CancelledError:
+        print("[Monitor] Shutdown")
+        raise
+
 
 async def main():
+    dispatcher_task = asyncio.create_task(dispatcher())
+    gps_task = asyncio.create_task(gps_system())
+    monitor_task = asyncio.create_task(monitor())
+    courier_tasks = []
+    for i in range(1, CORIERS_COUNT + 1):
+        task = asyncio.create_task(courier(f"Courier-{i}"))
+        courier_tasks.append(task)
+
+    await asyncio.gather(dispatcher_task, gps_task)
+    print()
+    await orders_queue.join()
+
+    for task in courier_tasks:
+        task.cancel()
+
+    await asyncio.gather(*courier_tasks, return_exceptions=True)
+
+    monitor_task.cancel()
+    await asyncio.gather(monitor_task, return_exceptions=True)
+
+    print_separator()
+    print(f"Total orders {len(all_orders)}")
+    print(f"Completed orders {completed_orders}")
+    print(f"Failed orders {failed_orders}")
+    print(f"Balance {balance}")
     print_separator()
 
-
+if __name__ == "__main__":
+    asyncio.run(main())
 
 
 
