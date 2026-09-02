@@ -88,6 +88,10 @@ def create_genre(session, name):
 
     return genre
 
+def get_all_genres(session):
+    statement = select(Genre)
+    return session.scalars(statement).all()
+
 def add_genre_to_movie(session, movie_id, genre_id):
     movie = session.get(Movie, movie_id)
     genre = session.get(Genre, genre_id)
