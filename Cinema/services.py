@@ -216,7 +216,7 @@ def get_favorites(session, user_id):
         .where(Favorite.user_id == user_id)
     )
 
-    return session.scalar(statement).all()
+    return session.scalars(statement).all()
 
 
 def create_subscriptions(session, user_id, plan, started_at, expires_at):

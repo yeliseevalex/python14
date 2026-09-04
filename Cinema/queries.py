@@ -1,3 +1,5 @@
+from sqlalchemy.exc import NoResultFound
+
 from models import (
     User,
     Movie,
@@ -38,7 +40,7 @@ def get_popular_movies(session):
         .group_by(Movie.id).order_by(desc("watch_count"))
     )
 
-    return session.scalar(statement).all()
+    return session.scalars(statement).all()
 
 def get_top_movies(session):
     statement = (
@@ -50,12 +52,12 @@ def get_top_movies(session):
         )
         .join(
             Rating,
-            Rating.movie == Movie.id
+            Rating.movie_id == Movie.id
         )
         .group_by(Movie.id).order_by(desc("average_rating"))
     )
 
-    return session.scalar(statement).all()
+    return session.scalars(statement).all()
 
 
 def get_user_history(session, user_id):
@@ -74,7 +76,7 @@ def get_user_history(session, user_id):
         .order_by(desc("watched_at"))
     )
 
-    return session.scalars(statement).all()
+    return session.execute(statement).all()
 
 
 def get_user_favorite_genre(session, user_id):
@@ -180,7 +182,10 @@ def get_movie_details(session, movie_id):
         )
     )
 
-    last_rating = session.scalar(last_rating_statement)[:5]
+    try:
+        last_rating = session.scalar(last_rating_statement)[:5]
+    except:
+        last_rating = []
 
     return {
         "title": movie.title,
@@ -254,7 +259,12 @@ def get_user_statistics(session, user_id):
         .where(Subscription.user_id == user_id)
     )
 
-    subscription_plan_and_expires = session.execute(subscription_plan_and_expires_statement).one()
+
+    try:
+        subscription_plan_and_expires = session.execute(subscription_plan_and_expires_statement).one()
+    except NoResultFound:
+        subscription_plan_and_expires = None
+
 
     return {
         "username": user.username,
@@ -264,8 +274,8 @@ def get_user_statistics(session, user_id):
         "favorite_genres": favorite_genres,
         "favorite_movies": favorite_movies,
         "rating_avg": rating_avg,
-        "subscription_plan": subscription_plan_and_expires[0],
-        "subscription_expires": subscription_plan_and_expires[1].strftime("%d.%m.%Y %H:%M:%S"),
+        "subscription_plan": subscription_plan_and_expires[0] if subscription_plan_and_expires else None,
+        "subscription_expires": subscription_plan_and_expires[1].strftime("%d.%m.%Y %H:%M:%S") if subscription_plan_and_expires else None,
 
     }
 
