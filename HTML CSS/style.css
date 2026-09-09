@@ -1,0 +1,53 @@
+body {
+    margin: 0;
+}
+
+.lorem-new {
+    color: #00cdf0;
+}
+p {
+    color: red;
+}
+
+div {
+    color: blue;
+    /* background-image: url("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSItPdTi4cTVbJqgoAHtUtcMMzswqmibSI9zugT6q_Lpe2wwahht3sCkSoO&s=10"); */
+    background: lightblue;
+    width: 95vw;
+    height: 1vh;
+    min-height: 100px;
+    background-size: cover;
+    background-position: right;
+
+
+
+    /* margin: 10px 15px 20px 25px;
+    margin-top: 10px;
+    margin-right: 20px;
+    margin-bottom: 30px;
+    margin-left: 40px;
+    padding: 20px; */
+
+    border: 3px solid red;
+    border-radius: 10px;
+    border-top-left-radius: 50px;
+    /* border-width: 3px;
+    border-style: solid;
+    border-color: red;*/
+
+
+    cursor: pointer;
+    transition: 5s;
+}
+
+div:hover{
+    background: red;
+    min-height: 150px;
+    height: 150px;
+
+
+}
+
+div {
+    
+}
