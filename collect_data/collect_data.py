@@ -1,5 +1,8 @@
+import json
+import logging
 from bs4 import BeautifulSoup
-import requests
+import asyncio
+import aiohttp
 # with open("example.html", "r") as f:
 #     html = f.read()
 
@@ -25,156 +28,198 @@ import requests
 
 # print(list(div_select[0].children))
 
-response = requests.get("https://www.rottentomatoes.com/browse/movies_in_theaters/sort:newest")
-# with open(r"D:\practice14\collect_data\movies.html", "w", encoding="utf-8") as f:
-#     f.write(response.text)
-#
-# with open(r"D:\practice14\collect_data\movies.html", "r", encoding="utf-8") as f:
-#     soup = BeautifulSoup(f.read(), "html.parser")
 
-soup = BeautifulSoup(response.text, "html.parser")
-movies_in_page = soup.find("div", {"class": "discovery-tiles__wrap"})
-all_movies_in_page = movies_in_page.find_all("div", {"class": "flex-container"})
+BASE_URL = "https://www.rottentomatoes.com"
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 
-movie_links = []
-for movie_info in all_movies_in_page:
-    movie_link = movie_info.find("a", {"class": "js-tile-link"})
-    movie_link = "https://www.rottentomatoes.com" + movie_link.get("href")
-    movie_links.append(movie_link)
-
-
-movie_links = movie_links
-
-result = {}
-
-# result = {
-#     "Movie1": {
-#         "title" : "Runner"
-#     }
-# }
-info = {}
-
-for i, movie_url in enumerate(movie_links):
-
-    res_movie = requests.get(movie_url)
-    soup_movie = BeautifulSoup(res_movie.text, "html.parser")
-    # with open("runner_2026.html", "w", encoding="utf-8") as f:
-    #     f.write(res_movie.text)
-    #
-    # with open("runner_2026.html", "r", encoding="utf-8") as f:
-    #     soup_movie = BeautifulSoup(f, "html.parser")
-
-    hero_wrap = soup_movie.find("div", {"class": "media-hero-wrap"})
-    title = hero_wrap.find("rt-text", {"slot": "title"}).get_text(strip=True)
-    print(title)
-    info["title"] = title
-
-    main_wrap = soup_movie.find("div", {"id": "main-wrap"})
-
-    media_scorecard = main_wrap.find("div", {"class": "media-scorecard"})
-    img_link = media_scorecard.find("rt-img", {"slot": "poster-image"}).get("src")
-    # print(img_link)
-    info["img_link"] = img_link
-
-
-    media_info = main_wrap.find("section", {"class": "media-info"})
-
-    description_info = media_info.find("div", {"class": "synopsis-wrap"})
+async def fetch_html(session: aiohttp.ClientSession, url: str) -> str | None:
     try:
-        description = description_info.find("rt-text", {"data-qa": "synopsis-value"}).get_text(strip=True)
+        async with session.get(url) as response:
+            response.raise_for_status()
+            return await response.text()
     except Exception as error:
-        print(f"Error: {error}")
-        description = None
-    # print(description)
-    info["description"] = description
+        print(f"Error {url}: {error}")
+        return None
 
-    dl = media_info.find("dl")
-    category_wrap = dl.find_all("div", {"class": "category-wrap"})
-    years = []
-    duration = 0
-    genre = None
-    for item in category_wrap:
-        dt_text = item.find("dt", {"class": "key"}).get_text(strip=True)
-        if "Release Date" in dt_text or "Rerelease Date" in dt_text:
-            dd = item.find("dd", {"data-qa": "item-value-group"})
-            date = dd.find("rt-text", {"data-qa": "item-value"}).get_text(strip=True)
-            year = date.split(',')[1].strip()
-            years.append(int(year))
-        if "Runtime" in dt_text:
-            dd = item.find("dd", {"data-qa": "item-value-group"})
-            duration = dd.find("rt-text", {"data-qa": "item-value"}).get_text(strip=True).split(" ")
-            if "h" in duration[0]:
-                duration = int(duration[0].replace("h", '')) * 60 + int(duration[1].replace("m", ''))
-            else:
-                duration = int(duration[0])
-        if "Genre" in dt_text:
-            dd = item.find("dd", {"data-qa": "item-value-group"})
-            genre = dd.find("rt-link", {"data-qa": "item-value"}).get_text(strip=True)
+async def parse_page_links(session: aiohttp.ClientSession, page_num: int) -> list[str]:
+    url = f"{BASE_URL}/browse/movies_in_theaters/sort:newest?page={page_num}"
+    logging.info(f"Parsing page {url}")
+    html = await fetch_html(session, url)
+    if not html:
+        return []
 
+    soup = BeautifulSoup(html, "html.parser")
+    movies_in_page = soup.find("div", {"class": "discovery-tiles__wrap"})
+    if not movies_in_page:
+        return []
 
-    # print(duration)
-    year = max(years)
-    # print(year)
-    years.clear()
-    # print(genre)
-    info["duration"] = duration
-    info["genre"] = genre
-    info["year"] = year
+    movie_links = []
+    for movie_info in movies_in_page.find_all("div", {"class": "flex-container"}):
+        link_tag = movie_info.find("a", {"class": "js-tile-link"})
+        if link_tag and link_tag.get("href"):
+            movie_links.append(f"{BASE_URL}{link_tag.get("href")}")
+    return movie_links
 
-    cast_and_crew_url = movie_url + "/cast-and-crew"
-    res_cast = requests.get(cast_and_crew_url)
-    soup_cast = BeautifulSoup(res_cast.text, "html.parser")
-    # with open("runner_2026.html", "w", encoding="utf-8") as f:
-    #     f.write(res_cast.text)
-    #
-    # with open("runner_2026.html", "r", encoding="utf-8") as f:
-    #     soup_cast = BeautifulSoup(f, "html.parser")
+async def get_all_movies_links(session: aiohttp.ClientSession, max_page: int = 5) -> list[str]:
+    tasks = [parse_page_links(session, page) for page in range(1, max_page + 1)]
+    results = await asyncio.gather(*tasks)
 
-    content_wrap = soup_cast.find("section", {"class": "cast-and-crew"})
-    cast_and_crew_card = content_wrap.find_all("cast-and-crew-card")
+    all_links = [link for sublist in results for link in sublist]
+    return all_links
 
-    actors_links = []
-    for cast_and_crew in cast_and_crew_card:
-       if "Actor" in cast_and_crew.text or "Self" in cast_and_crew.text:
-           actor_link = "https://www.rottentomatoes.com/" + cast_and_crew.get("media-url")
-           actors_links.append(actor_link)
+async def parse_actor_info(session: aiohttp.ClientSession, actor_url: str, semaphore: asyncio.Semaphore) -> tuple[str, int | None] | None:
+    async with semaphore:
+        html = await fetch_html(session, actor_url)
+        if not html:
+            return None
 
-    actors = []
-    for actor_url in actors_links:
-        res_actor = requests.get(actor_url)
-        soup_actor = BeautifulSoup(res_actor.text, "html.parser")
-        # with open("runner_2026.html", "w", encoding="utf-8") as f:
-        #     f.write(res_actor.text)
-        #
-        # with open("runner_2026.html", "r", encoding="utf-8") as f:
-        #     soup_actor = BeautifulSoup(f, "html.parser")
+        soup = BeautifulSoup(html, "html.parser")
+        h1_tag = soup.find("h1", {"class": "celebrity-bio__h1"})
+        if not h1_tag:
+            return None
 
-        name = soup_actor.find("h1", {"class": "celebrity-bio__h1"}).get_text(strip=True)
-        print(name)
+        name = h1_tag.get_text(strip=True)
         year_actor = None
-        div_celebrity_info = soup_actor.find("div", {"class": {"celebrity-bio__info"}})
-        p_info = div_celebrity_info.find_all("p", {"class": "celebrity-bio__item"})
-        for p in p_info:
-            if "Birthday" in p.find("rt-text").text:
-                year_actor = p.get_text(strip=True).split(",")[-1].strip()
 
-        if "Not Available" in year_actor:
-            year_actor = None
+        div_celebrity_info = soup.find("div", {"class": {"celebrity-bio__info"}})
+        if div_celebrity_info:
+            for p in div_celebrity_info.find_all("p", {"class": "celebrity-bio__item"}):
+                rt_text = p.find("rt-text")
+                if rt_text and "Birthday" in rt_text.text:
+                    birth_text = p.get_text(strip=True).split(",")[-1].strip()
+                    if "Not Available" not in birth_text and birth_text.isdigit():
+                        year_actor = int(birth_text)
+                    break
 
-        year_actor = int(year_actor) if year_actor else None
-        # print(year_actor)
-        actors.append((name, year_actor))
+        return name, year_actor
 
-    info["actors"] = actors
+async def parse_cast_and_crew(session: aiohttp.ClientSession, movie_url: str, semaphore: asyncio.Semaphore) -> list[tuple[str, int | None]]:
+    cast_url = f"{movie_url}/cast-and-crew"
+    async with semaphore:
+        html = await fetch_html(session, cast_url)
 
-    result[f"movie{i+1}"] = info
-    print("*" * 50)
-    print(info)
+    if not html:
+        return []
+
+    soup = BeautifulSoup(html, "html.parser")
+    content_wrap = soup.find("section", {"class": "cast-and-crew"})
+    if not content_wrap:
+        return []
+
+    actor_tasks = []
+    for card in content_wrap.find_all("cast-and-crew-card"):
+        if "Actor" in card.text or "Self" in card.text:
+            media_link = card.get("media-url")
+            if media_link:
+                actor_link = f"{BASE_URL}/{media_link.lstrip('/')}"
+                actor_tasks.append(parse_actor_info(session, actor_link, semaphore))
+
+    actors = await asyncio.gather(*actor_tasks)
+    return [a for a in actors if a is not None]
+
+async def parse_movie_details(session: aiohttp.ClientSession, movie_url: str, semaphore: asyncio.Semaphore) -> dict | None:
+    async with semaphore:
+        html = await fetch_html(session, movie_url)
+
+    if not html:
+        return None
+
+    soup = BeautifulSoup(html, "html.parser")
     info = {}
 
-print("=" * 100)
-print(result)
-import json
+    logging.info(f"Parsing movie details for {movie_url}")
 
-with open("result.json", "w") as f:
-    json.dump(result, f, indent=4)
+    hero_wrap = soup.find("div", {"class": "media-hero-wrap"})
+    info["title"] = (
+        hero_wrap.find("rt-text", {"slot": "title"}).get_text(strip=True)
+        if hero_wrap and hero_wrap.find("rt-text", {"slot": "title"})
+        else "N/A"
+    )
+
+    main_wrap = soup.find("div", {"id": "main-wrap"})
+    if not main_wrap:
+        return None
+
+    media_scorecard = main_wrap.find("div", {"class": "media-scorecard"})
+    info["img_link"] = (
+        media_scorecard.find("rt-img", {"slot": "poster-image"}).get("src")
+        if media_scorecard and media_scorecard.find("rt-img", {"slot": "poster-image"})
+        else None
+    )
+
+    media_info = main_wrap.find("section", {"class": "media-info"})
+    if media_info:
+        description_info = media_info.find("div", {"class": "synopsis-wrap"})
+        info["description"] = (
+            description_info.find("rt-text", {"data-qa": "synopsis-value"}).get_text(strip=True)
+            if description_info and description_info.find("rt-text", {"data-qa": "synopsis-value"})
+            else None
+        )
+
+        years, duration, genre = [], 0, None
+        dl = media_info.find("dl")
+        if dl:
+            for item in dl.find_all("div", {"class": "category-wrap"}):
+                dt = item.find("dt", {"class": "key"})
+                dd = item.find("dd", {"data-qa": "item-value-group"})
+                if not dt or not dd:
+                    continue
+
+                dt_text = dt.get_text(strip=True)
+                if "Release Date" in dt_text or "Rerelease Date" in dt_text:
+                    date_tag = dd.find("rt-text", {"data-qa": "item-value"})
+                    if date_tag:
+                        parts = date_tag.get_text(strip=True).split(",")
+                        if len(parts) > 1 and parts[1].strip().isdigit():
+                            years.append(int(parts[1].strip()))
+
+                elif "Runtime" in dt_text:
+                    runtime_tag = dd.find("rt-text", {"data-qa": "item-value"})
+                    if runtime_tag:
+                        dur_parts = runtime_tag.get_text(strip=True).split(" ")
+                        if len(dur_parts) >= 2 and "h" in dur_parts[0] and "m" in dur_parts[1]:
+                            hours = int(dur_parts[0].replace("h", ''))
+                            minutes = int(dur_parts[1].replace("m", ''))
+                            duration = hours * 60 + minutes
+                        elif len(dur_parts) >= 1 and dur_parts[0].isdigit():
+                            duration = int(dur_parts[0])
+
+                elif "Genre" in dt_text:
+                    genre_tag = dd.find("rt-link", {"data-qa": "item-value"})
+                    if genre_tag:
+                        genre = genre_tag.get_text(strip=True)
+
+        info["duration"] = duration
+        info["genre"] = genre
+        info["year"] = max(years) if years else None
+
+    info["actors"] = await parse_cast_and_crew(session, movie_url, semaphore)
+    return info
+
+async def main():
+    semaphore = asyncio.Semaphore(15)
+
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Mobile Safari/537.36'
+    }
+
+    async with aiohttp.ClientSession(headers=headers) as session:
+        logging.info("Collecting movies...")
+        movie_links = await get_all_movies_links(session, max_page=5)
+        logging.info(f"{len(movie_links)} movies collected")
+
+        logging.info("Parsing movies data...")
+        tasks = [parse_movie_details(session, url, semaphore) for url in movie_links]
+        parsed_movies = await asyncio.gather(*tasks)
+
+        result = {}
+        for i, movie_data in enumerate(parsed_movies):
+            if movie_data:
+                result[f"movie{i+1}"] = movie_data
+
+    with open("movies.json", "w", encoding="utf-8") as f:
+        json.dump(result, f, indent=4)
+    logging.info("Done! movies.json has been saved")
+
+if __name__ == "__main__":
+    asyncio.run(main())
