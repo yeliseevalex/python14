@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Online Cinema</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #111;
+            color: white;
+            margin: 0;
+            padding: 40px;
+        }
+
+        h1 {
+            margin-bottom: 30px;
+        }
+
+        a {
+            text-decoration: none;
+            color: white;
+        }
+
+        .movies{
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 25px;
+        }
+
+        .movie{
+            background: #222;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .movie img{
+            width: 100%;
+            height: 400px;
+            object-fit: cover;
+        }
+
+        .movie-info{
+            padding: 15px;
+        }
+
+        .movie-title{
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .movie-meta{
+            color: #aaa;
+            margin-top: 8px;
+        }
+
+    </style>
+</head>
+<body>
+    <h1>Online Cinema</h1>
+
+    <form method="GET">
+        <input type="text" name="search" placeholder="Search movie..." value="{{ search }}">
+
+        <select name="genre">
+            <option value="">All genres</option>
+
+            {% for genre in genres %}
+                <option value="{{ genre.name }}">
+                    {% if selected_genre == genre.name %}
+                        selected
+                    {% endif %}
+                    {{ genre.name }}
+                </option>
+            {% endfor %}
+        </select>
+
+        <select name="sort">
+            <option value="">Sort by</option>
+            <option value="newest">
+                {% if selected_sort == "newest" %}
+                    selected
+                {% endif %}
+                Newest
+            </option>
+
+            <option value="oldest">
+                {% if selected_sort == "oldest" %}
+                    selected
+                {% endif %}
+                Oldest
+            </option>
+
+            <option value="shortest">
+                {% if selected_sort == "shortest" %}
+                    selected
+                {% endif %}
+                Shortest
+            </option>
+
+            <option value="longest">
+                {% if selected_sort == "longest" %}
+                    selected
+                {% endif %}
+                Longest
+            </option>
+        </select>
+
+        <button type="submit">Search</button>
+    </form>
+
+
+
+    <div class="movies">
+        {% for movie in movies %}
+            <a href="{% url 'movie_detail' movie.id %}">
+                <div class="movie">
+                    <img src="{{ movie.img_link }}" alt="{{ movie.title }}">
+                    <div class="movie-info">
+                        <div class="movie-title">
+                            {{ movie.title }}
+                        </div>
+
+                        <div class="movie-meta">
+                            {{ movie.year }}
+                            {{ movie.genre.name }}
+                            {{ movie.duration }} min
+                        </div>
+                    </div>
+                </div>
+            </a>
+        {% endfor %}
+    </div>
+
+</body>
+</html>

@@ -8,7 +8,7 @@ class Genre(models.Model):
         blank=True
     )
     def __str__(self):
-        return self.name
+        return self.name or "No name"
 
 class Actor(models.Model):
     name = models.CharField(
@@ -23,7 +23,7 @@ class Actor(models.Model):
     )
 
     def __str__(self):
-        return self.name
+        return self.name or "No name"
 
 class Movie(models.Model):
     title = models.CharField(
@@ -56,12 +56,12 @@ class Movie(models.Model):
     genre = models.ForeignKey(
         Genre,
         on_delete=models.PROTECT,
-        related_name='movies',
+        related_name='genre_movies',
     )
 
     actors = models.ManyToManyField(
         Actor,
-        related_name='movies',
+        related_name='actors_movies',
     )
 
     created_at = models.DateTimeField(
@@ -69,4 +69,4 @@ class Movie(models.Model):
     )
 
     def __str__(self):
-        return self.title
+        return self.title or "No name"

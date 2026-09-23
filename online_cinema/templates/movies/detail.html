@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ movie.title }} - Online Cinema</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #111;
+            color: white;
+            margin: 0;
+            padding: 40px;
+        }
+
+        h1 {
+            margin-bottom: 30px;
+        }
+    </style>
+</head>
+<body>
+    <a href="{% url 'home' %}">Back</a>
+
+    <h1>{{ movie.title }}</h1>
+    <img src="{{ movie.img_link }}" alt="{{ movie.title }}">
+
+    <p>
+        Genre: {{ movie.genre.name }}
+    </p>
+    <p>
+        Duration: {{ movie.duration }} min.
+    </p>
+
+    <h2>Description</h2>
+    <p>
+       {{ movie.description }}
+    </p>
+
+    <h2>Actors</h2>
+    <ul>
+        {% for actor in movie.actors.all %}
+            <li>
+                {{ actor.name }}
+            </li>
+        {% endfor %}
+    </ul>
+</body>
+</html>
