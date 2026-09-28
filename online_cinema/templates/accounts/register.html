@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Реєстрація - Online Cinema</title>
+</head>
+<body>
+    <h1>Online Cinema</h1>
+    <h2>Створити акаунт</h2>
+
+    <form method="POST">
+        {% csrf_token %}
+
+        {{ form.as_p }}
+
+        <button type="submit">Зареєструватися</button>
+    </form>
+
+    <p>
+        Вже маєте акаунт?
+        <a href="{% url 'login' %}">Увійти</a>
+    </p>
+
+</body>
+</html>

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Мій профіль - Online Cinema</title>
+</head>
+<body>
+
+    <a href="{% url 'home' %}">До каталогу</a>
+
+    <h1>Мій профіль</h1>
+
+    <h2>Вітаємо, {{ user.username }}</h2>
+
+    <p>Email: {{ user.email }}</p>
+
+    <hr>
+
+    <h2>❤️ Мої улюблені фільми</h2>
+
+    {% if favorites %}
+
+        {% for favorite in favorites %}
+            <div>
+                <h3>
+                    <a href="{% url 'movie_detail' favorite.movie.id %}">{{ favorite.movie.title }}</a>
+                </h3>
+
+                <p>
+                    {{ favorite.movie.year }}
+                </p>
+
+                <img src="{{ favorite.movie.img_link }}" alt="{{ favorite.movie.title }}" width="120">
+
+            </div>
+            <hr>
+        {% endfor %}
+
+    {% else %}
+        <p>
+            Ви ще не додали жодного фільму в обране
+        </p>
+    {% endif %}
+
+
+
+</body>
+</html>

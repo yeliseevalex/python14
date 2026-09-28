@@ -52,10 +52,18 @@ def movie_detail(request, movie_id):
         id=movie_id
     )
 
+    is_favorite = False
+
+    if request.user.is_authenticated:
+        is_favorite = movie.favorited_by.filter(
+            user_id=request.user.id
+        ).exists()
+
     return render(
         request,
         "movies/detail.html",
         {
-            "movie": movie
+            "movie": movie,
+            "is_favorite": is_favorite
         }
     )

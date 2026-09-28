@@ -1,47 +1,75 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>{{ movie.title }} - Online Cinema</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #111;
-            color: white;
-            margin: 0;
-            padding: 40px;
-        }
+{% extends "base.html" %}
+{% block title %}
+    {{ movie.title }} - Online Cinema
+{% endblock %}
 
-        h1 {
-            margin-bottom: 30px;
-        }
-    </style>
-</head>
-<body>
-    <a href="{% url 'home' %}">Back</a>
+{% block content %}
+    <a href="{% url 'home' %}" class="back-link">← До каталогу</a>
 
-    <h1>{{ movie.title }}</h1>
-    <img src="{{ movie.img_link }}" alt="{{ movie.title }}">
 
-    <p>
-        Genre: {{ movie.genre.name }}
-    </p>
-    <p>
-        Duration: {{ movie.duration }} min.
-    </p>
+    <section class="movie-detail">
+        <div class="movie-detail-poster">
+            <img src="{{ movie.img_link }}" alt="{{ movie.title }}">
+        </div>
 
-    <h2>Description</h2>
-    <p>
-       {{ movie.description }}
-    </p>
+        <div class="movie-detail-info">
+            <h1>
+                {{ movie.title }}
+            </h1>
 
-    <h2>Actors</h2>
-    <ul>
-        {% for actor in movie.actors.all %}
-            <li>
-                {{ actor.name }}
-            </li>
-        {% endfor %}
-    </ul>
-</body>
-</html>
+            <div class="movie-meta">
+                <span>
+                    📅 {{ movie.year }}
+                </span>
+                <span>
+                    🎭 {{ movie.genre.name }}
+                </span>
+                <span>
+                    ⏱ {{ movie.duration }} хв.
+                </span>
+            </div>
+
+            <h2>Опис</h2>
+            <p class="movie-description">
+               {{ movie.description }}
+            </p>
+
+        </div>
+
+        {% if user.is_authenticated %}
+            {% if is_favorite %}
+               <form method="POST" action="{% url 'toggle_favorite' movie.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="button button-favorite active">
+                        ❤️ В обраному
+                    </button>
+                </form>
+            {% else %}
+                <form method="POST" action="{% url 'toggle_favorite' movie.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="button button-favorite">
+                        🤍 Додати в обране
+                    </button>
+                </form>
+            {% endif %}
+
+            {% else %}
+                <a href="{% url 'login' %}" class="button">🔑 Увійдіть, щоб додати в обране</a>
+        {% endif %}
+    </section>
+
+    <section class="actors-section">
+        <h2>🎭 Актори</h2>
+        <div class="actors-list">
+            {% for actor in movie.actors.all %}
+                <div class="actor-card">
+                    <strong>{{ actor.name }}</strong>
+                </div>
+            {% empty %}
+                <p>
+                    Інформації про акторів немає
+                </p>
+            {% endfor %}
+        </div>
+    </section>
+{% endblock %}

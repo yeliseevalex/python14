@@ -1,0 +1,16 @@
+<footer class="site-footer">
+    <div class="container footer-inner">
+        <div>
+            <strong>Online Cinema</strong>
+            <p>Твоя колекція філмів</p>
+        </div>
+
+        <div class="footer-links">
+            <a href="{% url 'home' %}">Фільми</a>
+
+            {% if user.is_authenticated %}
+                <a href="{% url 'profile' %}">Мій профіль</a>
+            {% endif %}
+        </div>
+    </div>
+</footer>
