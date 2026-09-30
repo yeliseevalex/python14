@@ -71,11 +71,14 @@ def logout_view(request):
 def profile(request):
     favorites = request.user.favorites.select_related('movie').all()
 
+    watch_history = request.user.watch_history.select_related('movie').all()
+
     return render(
         request,
         "accounts/profile.html",
         {
-            "favorites": favorites
+            "favorites": favorites,
+            "watch_history": watch_history
         }
     )
 
