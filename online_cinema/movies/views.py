@@ -71,6 +71,10 @@ def movie_detail(request, movie_id):
             user_id=request.user.id
         ).exists()
 
+    comments = movie.comments.filter(
+        parent__isnull=True
+    ).select_related("user").prefetch_related("replies__user")
+
     return render(
         request,
         "movies/detail.html",
@@ -79,6 +83,7 @@ def movie_detail(request, movie_id):
             "is_favorite": is_favorite,
             "average_rating": average_rating,
             "rating_count": rating_count,
-            "user_rating": user_rating
+            "user_rating": user_rating,
+            "comments": comments
         }
     )

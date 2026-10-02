@@ -129,6 +129,156 @@
             {% endfor %}
         </div>
     </section>
+
+    <section class="comments-section">
+        <h2>
+            💬 Коментарі
+        </h2>
+
+        {% if user.is_authenticated %}
+            <form method="POST" action="{% url 'add_comment' movie.id %}" class="comment-form">
+                {% csrf_token %}
+                <textarea name="text" rows="4" placeholder="Напишіть свій коментар..." required></textarea>
+                <button type="submit" class="button">💬 Додати коментар</button>
+            </form>
+        {% else %}
+            <div class="comment-login-message">
+                🔐<a href="{% url 'login' %}">Увійдіть</a>, щоб залишити коментар
+            </div>
+        {% endif %}
+
+
+        <div class="comments-list">
+            {% for comment in comments %}
+                <article class="comment" data-comment-id="{{ comment.id }}">
+                    <div class="comment-header">
+                        <strong>
+                            👤 {{ comment.user.username }}
+                        </strong>
+                        <span class="comment-date">
+                            {{ comment.created_at|date:"d.m.Y H:i" }}
+                        </span>
+                    </div>
+
+
+                    <div class="comment-content">
+                        <div class="comment-text">
+                            {{ comment.text|linebreaks }}
+                        </div>
+
+                        <div class="comment-edit-form">
+                        </div>
+                    </div>
+
+
+                    <div class="comment-actions">
+                        {% if user.is_authenticated %}
+                            <button type="button" class="reply-button" data-comment-id="{{ comment.id }}">
+                                💬 Відповісти
+                            </button>
+                        {% endif %}
+
+
+                        {% if user == comment.user %}
+                            <button type="button" class="edit-button" data-comment-id="{{ comment.id }}">
+                                ✏️ Редагувати
+                            </button>
+
+
+                            <button type="button" class="delete-button" data-comment-id="{{ comment.id }}">
+                                🗑️ Видалити
+                            </button>
+                        {% endif %}
+                    </div>
+
+
+                    <div class="reply-form-container">
+                    </div>
+
+
+                <div class="replies">
+
+                    {% for reply in comment.replies.all %}
+
+                        <article
+                            class="comment reply"
+                            data-comment-id="{{ reply.id }}"
+                        >
+
+                            <div class="comment-header">
+
+                                <strong>
+                                    👤 {{ reply.user.username }}
+                                </strong>
+
+                                <span class="comment-date">
+                                    {{ reply.created_at|date:"d.m.Y H:i" }}
+                                </span>
+
+                            </div>
+
+
+                            <div class="comment-content">
+
+                                <div class="comment-text">
+                                    {{ reply.text|linebreaks }}
+                                </div>
+
+                                <div class="comment-edit-form">
+                                </div>
+
+                            </div>
+
+
+                            <div class="comment-actions">
+
+                                <button type="button" class="reply-button" data-comment-id="{{ reply.id }}">
+                                    💬 Відповісти
+                                </button>
+
+
+                                {% if user == reply.user %}
+
+                                    <button type="button" class="edit-button" data-comment-id="{{ reply.id }}">
+                                        ✏️ Редагувати
+                                    </button>
+
+
+                                    <button type="button" class="delete-button" data-comment-id="{{ reply.id }}">
+                                        🗑️ Видалити
+                                    </button>
+
+                                {% endif %}
+
+                            </div>
+
+                            <div class="reply-form-container">
+                            </div>
+
+            </article>
+
+        {% endfor %}
+
+    </div>
+
+</article>
+
+            {% empty %}
+
+                <div class="empty-state">
+                    <h3>
+                        💬 Коментарів поки немає
+                    </h3>
+                    <p>
+                        Будьте першим, хто залишить коментар!
+                    </p>
+                </div>
+
+            {% endfor %}
+
+        </div>
+
+    </section>
 {% endblock %}
 
 {% block extra_js %}
@@ -225,6 +375,263 @@
             }
 
         });
+    });
+
+    document.querySelectorAll(".reply-button").forEach((button) => {
+        button.addEventListener("click", () => {
+            const commentId = button.dataset.commentId;
+
+            const comment = document.querySelector(`[data-comment-id="${commentId}"]`);
+
+            const container = comment.querySelector('.reply-form-container');
+
+            if (container.innerHTML.trim() !== "") {
+                container.innerHTML = "";
+                return;
+            }
+
+            container.innerHTML = `
+                <form class="reply-form" method="POST">
+                    {% csrf_token %}
+                    <textarea name="text" placeholder="Ваша відповідь..." rows="3" required></textarea>
+                    <div class="reply-form-actions">
+                        <button type="submit" class="button">💬 Відповісти</button>
+                        <button type="button" class="cancel-reply">Скасувати</button>
+                    </div>
+                </form>
+            `;
+
+            const form = container.querySelector('.reply-form');
+
+            form.addEventListener(
+                "submit",
+                async (event) => {
+                    event.preventDefault();
+
+                    const formData = new FormData(form);
+
+                    const response = await fetch(
+                        `/interactions/comment/{{ movie.id }}/reply/${commentId}/`,
+                        {
+                            method: "POST",
+                            headers: {"X-CSRFToken": "{{ csrf_token }}"},
+                            body: formData
+                        }
+                    );
+
+                    if (response.ok) {
+                        window.location.reload();
+                    } else {
+                        alert("Не вдалося додати відповідь");
+                    }
+                }
+            );
+
+            container.querySelector(".cancel-reply").addEventListener('click', () =>{
+                container.innerHTML = "";
+            });
+        });
+    });
+
+    document.querySelectorAll(".edit-button")
+    .forEach((button) => {
+
+        button.addEventListener("click", () => {
+
+            const commentId =
+                button.dataset.commentId;
+
+            const comment =
+                document.querySelector(
+                    `[data-comment-id="${commentId}"]`
+                );
+
+            const textElement =
+                comment.querySelector(
+                    ".comment-text"
+                );
+
+            const formContainer =
+                comment.querySelector(
+                    ".comment-edit-form"
+                );
+
+
+            const oldText =
+                textElement.innerText.trim();
+
+
+            formContainer.innerHTML = `
+                <form class="edit-comment-form">
+
+                    <textarea
+                        name="text"
+                        rows="4"
+                        required
+                    >${oldText}</textarea>
+
+                    <div class="edit-form-actions">
+
+                        <button
+                            type="submit"
+                            class="button"
+                        >
+                            💾 Зберегти
+                        </button>
+
+                        <button
+                            type="button"
+                            class="cancel-edit"
+                        >
+                            Скасувати
+                        </button>
+
+                    </div>
+
+                </form>
+            `;
+
+
+            textElement.style.display =
+                "none";
+
+
+            const form =
+                formContainer.querySelector(
+                    ".edit-comment-form"
+                );
+
+
+            form.addEventListener(
+                "submit",
+                async (event) => {
+
+                    event.preventDefault();
+
+
+                    const formData =
+                        new FormData(form);
+
+
+                    const response =
+                        await fetch(
+                            `/interactions/comment/${commentId}/edit/`,
+                            {
+                                method: "POST",
+
+                                headers: {
+                                    "X-CSRFToken":
+                                        "{{ csrf_token }}",
+                                },
+
+                                body: formData,
+                            }
+                        );
+
+
+                    const data =
+                        await response.json();
+
+
+                    if (data.success) {
+
+                        textElement.innerHTML =
+                            data.text.replace(
+                                /\n/g,
+                                "<br>"
+                            );
+
+                        textElement.style.display =
+                            "block";
+
+                        formContainer.innerHTML =
+                            "";
+
+                    } else {
+
+                        alert(data.error);
+
+                    }
+
+                }
+            );
+
+
+            formContainer
+                .querySelector(".cancel-edit")
+                .addEventListener(
+                    "click",
+                    () => {
+
+                        formContainer.innerHTML =
+                            "";
+
+                        textElement.style.display =
+                            "block";
+
+                    }
+                );
+
+        });
+
+    });
+
+    document.querySelectorAll(".delete-button")
+    .forEach((button) => {
+
+        button.addEventListener("click", async () => {
+
+            const commentId =
+                button.dataset.commentId;
+
+
+            const confirmed =
+                confirm(
+                    "Ви впевнені, що хочете видалити цей коментар?"
+                );
+
+
+            if (!confirmed) {
+                return;
+            }
+
+
+            const response =
+                await fetch(
+                    `/interactions/comment/${commentId}/delete/`,
+                    {
+                        method: "POST",
+
+                        headers: {
+                            "X-CSRFToken":
+                                "{{ csrf_token }}",
+                        },
+                    }
+                );
+
+
+            const data =
+                await response.json();
+
+
+            if (data.success) {
+
+                const comment =
+                    document.querySelector(
+                        `[data-comment-id="${commentId}"]`
+                    );
+
+
+                comment.remove();
+
+            } else {
+
+                alert(data.error);
+
+            }
+
+        });
+
     });
 
 </script>
