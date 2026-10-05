@@ -130,6 +130,39 @@
         </div>
     </section>
 
+    <section class="recommendations">
+        <div class="section-header">
+            <h2>
+               🎬 Вам також може сподобатися
+            </h2>
+            <p>
+                Фільми, схожі на цей
+            </p>
+        </div>
+
+        <div class="movie-grid">
+            {% for movie, score in recommendations %}
+                <article class="movie-card">
+                    <img src="{{ movie.img_link }}" alt="{{ movie.title }}">
+                    <div class="movie-card-content">
+                        <h3>
+                            {{ movie.title }}
+                        </h3>
+                        <p>
+                            {{ movie.year }}
+                            {{ movie.duration }} хв.
+                        </p>
+                        <a href="{% url 'movie_detail' movie.id %}">Переглянути</a>
+                    </div>
+                </article>
+            {% empty %}
+                <p>
+                    Поки що немає схожих фільмів
+                </p>
+            {% endfor %}
+        </div>
+    </section>
+
     <section class="comments-section">
         <h2>
             💬 Коментарі

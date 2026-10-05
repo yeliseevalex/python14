@@ -12,10 +12,43 @@
         </p>
     </section>
 
+    {% if user.is_authenticated and recommendations %}
+        <section class="recommendations" style="margin-top: 10px; margin-bottom: 50px">
+            <h2>
+                ✨ Рекомендації
+            </h2>
+            <p>
+                Фільми, які можуть вам сподобатися
+            </p>
+            <div class="movie-grid">
+                {% for item in recommendations %}
+                    {% with movie=item.movie %}
+                    <a href="{% url 'movie_detail' movie.id %}">
+                        <article class="movie-card">
+                            <img src="{{ movie.img_link }}" alt="{{ movie.title }}">
+                            <div class="movie-card-content">
+                                <h3>
+                                    {{ movie.title }}
+                                </h3>
+                                <p>
+                                    {{ movie.year }}
+                                    {{ movie.duration }} хв.
+                                </p>
+                            </div>
+                         </article>
+                        </a>
+                    {% endwith %}
+                {% endfor %}
+            </div>
+        </section>
+    {% endif %}
 
-    <form method="GET">
-            <input type="text" name="search" placeholder="Search movie..." value="{{ search }}">
+    <form method="GET" class="movie-filters">
+        <div class="search-box">
+             <input type="text" name="search" placeholder="Search movie..." value="{{ search }}">
+        </div>
 
+        <div class="filter-box">
             <select name="genre">
                 <option value="">All genres</option>
 
@@ -28,42 +61,45 @@
                     </option>
                 {% endfor %}
             </select>
+             <select name="sort">
+                    <option value="">Sort by</option>
+                    <option value="newest">
+                        {% if selected_sort == "newest" %}
+                            selected
+                        {% endif %}
+                        Newest
+                    </option>
 
-            <select name="sort">
-                <option value="">Sort by</option>
-                <option value="newest">
-                    {% if selected_sort == "newest" %}
-                        selected
-                    {% endif %}
-                    Newest
-                </option>
+                    <option value="oldest">
+                        {% if selected_sort == "oldest" %}
+                            selected
+                        {% endif %}
+                        Oldest
+                    </option>
 
-                <option value="oldest">
-                    {% if selected_sort == "oldest" %}
-                        selected
-                    {% endif %}
-                    Oldest
-                </option>
+                    <option value="shortest">
+                        {% if selected_sort == "shortest" %}
+                            selected
+                        {% endif %}
+                        Shortest
+                    </option>
 
-                <option value="shortest">
-                    {% if selected_sort == "shortest" %}
-                        selected
-                    {% endif %}
-                    Shortest
-                </option>
+                    <option value="longest">
+                        {% if selected_sort == "longest" %}
+                            selected
+                        {% endif %}
+                        Longest
+                    </option>
+                </select>
+             <button type="submit" class="filter-button">Search</button>
+             {% if search or selected_genre or selected_sort %}
+                <button type="submit" class="reset-button">Reset</button>
+            {% endif %}
+            </div>
 
-                <option value="longest">
-                    {% if selected_sort == "longest" %}
-                        selected
-                    {% endif %}
-                    Longest
-                </option>
-            </select>
-
-            <button type="submit">Search</button>
         </form>
     <section class="movie-grid">
-            {% for movie in movies %}
+            {% for movie in page_obj %}
                 <a href="{% url 'movie_detail' movie.id %}" class="movie-card">
                     <img src="{{ movie.img_link }}" alt="{{ movie.title }}" class="movie-card-image">
                     <div class="movie-card-body">
@@ -79,4 +115,27 @@
                 </a>
             {% endfor %}
     </section>
+<!--    <section class="section-pagination">-->
+        {% if page_obj.has_other_pages %}
+            <nav class="pagination">
+                {% if page_obj.has_previous %}
+                    <a href="?{{ query_params.urlencode }}&page={{ page_obj.previous_page_number }}" class="pagination-button">
+                        ←
+                    </a>
+                {% endif %}
+                {% for page_number in page_obj.paginator.page_range %}
+                    {% if page_obj.number == page_number %}
+                        <span class="pagination-button active">{{ page_number }}</span>
+                    {% else %}
+                        <a href="?{{ query_params.urlencode }}&page={{ page_number }}" class="pagination-button">{{ page_number }}</a>
+                    {% endif %}
+                {% endfor %}
+                {% if page_obj.has_next %}
+                    <a href="?{{ query_params.urlencode }}&page={{ page_obj.next_page_number }}" class="pagination-button">
+                        →
+                    </a>
+                {% endif %}
+            </nav>
+        {% endif %}
+<!--    </section>-->
 {% endblock %}
