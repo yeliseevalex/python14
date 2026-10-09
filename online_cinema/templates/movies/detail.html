@@ -97,12 +97,24 @@
 
                 <div class="rating-buttons">
                     {% for number in "12345" %}
-                        <button type="button" class="rating-button" data-rating="{{ number }}">⭐</button>
+                        <button type="button" class="rating-button" data-rating="{{ number }}"
+                            {% if user_rating and number|add:"0" <= user_rating.value %}
+                                style="opacity: 1;"
+                            {% else %}
+                                style=""opacity: 0.5;"
+                            {% endif %}
+                        >
+                            {% if user_rating and number|add:"0" <= user_rating.value %}
+                                ⭐
+                            {% else %}
+                                ☆
+                            {% endif %}
+                        </button>
                     {% endfor %}
                 </div>
                 <p id="rating-message">
                     {% if user_rating %}
-                        {{ user_rating.value }}/5
+                        Ваша оцінка: {{ user_rating.value }}/5
                     {% else %}
                         Ви ще не оцінювали цей фільм
                     {% endif %}
@@ -398,10 +410,20 @@
                 }
             );
 
-            const data = await response.json;
+            const data = await response.json();
 
             if (data.success) {
                 ratingMessage.textContent = `Ваша оцінка: ${data.value}/5`;
+                ratingButtons.forEach((star) => {
+                    const starRating = Number(star.dataset.rating);
+                    if (starRating <= data.value) {
+                        star.textContent = "⭐";
+                        star.style.opacity = "1";
+                    } else {
+                        star.textContent = "⭐";
+                        star.style.opacity = "0.5";
+                    }
+                });
 
             } else {
                 ratingMessage.textContent = data.error;

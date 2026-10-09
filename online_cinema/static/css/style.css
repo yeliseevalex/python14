@@ -955,3 +955,65 @@ AUTH
     background: #444;
     transform: translateY(-1px);
 }
+
+
+/*
+TIME PICKER
+*/
+
+.time-picker-banner{
+    margin: 30px 0;
+    padding: 28px;
+    border-radius: 16px;
+    background: #172554;
+    color: #fff;
+}
+
+.time-picker-banner h2{
+    margin-top: 0;
+}
+
+.time-picker-banner p{
+    margin-bottom: 20px;
+}
+
+.time-picker-banner .filter-button{
+    display: inline-flex;
+    text-decoration: none;
+    text-align: center;
+    justify-content: center;
+    align-items: center;
+}
+
+.time-picker-section, .time-picker-results{
+    margin: 30px 0;
+}
+
+.time-picker-section label{
+    display: inline-block;
+    margin-right: 8px;
+    color: #444;
+}
+
+.time-picker-section input,
+.time-picker-section select{
+    padding: 10px;
+    margin-right: 12px;
+    border-radius: 8px;
+}
+
+.time-picker-results > .movie-grid > .movie-card > .movie-card-body > h3 {
+    color: #333;
+}
+
+.time-picker-results > form {
+    margin-top: 25px;
+}
+.time-picker-results > form > button{
+    background: #172554;
+}
+
+.error-message{
+    margin: 20px 0;
+    color: #dc2626;
+}

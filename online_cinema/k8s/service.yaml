@@ -1,0 +1,16 @@
+apiVersion: v1
+
+kind: Service
+
+metadata:
+  name: online-cinema-service
+
+spec:
+  selector:
+    app: online-cinema-web
+
+  ports:
+    - port: 80
+      targetPort: 8000
+
+  type: ClusterIP

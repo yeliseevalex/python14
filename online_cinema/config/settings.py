@@ -93,6 +93,17 @@ DATABASES = {
     }
 }
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': os.environ.get('DB_NAME', 'online_cinema'),
+#         'USER': os.environ.get('DB_USER', 'online_cinema_user'),
+#         'PASSWORD': os.environ.get('DB_PASSWORD', '123456789'),
+#         'HOST': os.environ.get('DB_HOST', 'db'),
+#         'PORT': os.environ.get('DB_PORT', '5432'),
+#     }
+# }
+
 
 # Password validation
 # https://docs.djangoproject.com/en/6.1/ref/settings/#auth-password-validators

@@ -1,0 +1,44 @@
+services:
+
+  web:
+    build: .
+    container_name: online-cinema-web
+    command: python manage.py runserver 0.0.0.0:8000
+    ports:
+      - "8000:8000"
+
+    environment:
+      SECRET_KEY: django-insecure-q^o5#odm$mgh0m68g#yc=j(u&9w=zgn)^g+2=@j6(1i76h&&r*
+      DB_PASSWORD: 123456789
+      DB_NAME: online_cinema
+      DB_USER: online_cinema_user
+      DB_HOST: db
+      DB_PORT: 5432
+
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:16
+    container_name: online-cinema-db
+
+    environment:
+      POSTGRES_DB: online_cinema
+      POSTGRES_USER: online_cinema_user
+      POSTGRES_PASSWORD: 123456789
+
+    ports:
+      - "5432:5432"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U online_cinema_user -d online_cinema"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:

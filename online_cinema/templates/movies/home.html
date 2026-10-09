@@ -12,6 +12,16 @@
         </p>
     </section>
 
+    <div class="time-picker-banner">
+        <h2>⏰ Є трохи вільного часу?</h2>
+        <p>
+            Ми підберемо фільми, які ти встигнеш подивитися
+        </p>
+        <a href="{% url 'time_picker' %}" class="filter-button">
+            🍿 Підібрати фільми за часом
+        </a>
+    </div>
+
     {% if user.is_authenticated and recommendations %}
         <section class="recommendations" style="margin-top: 10px; margin-bottom: 50px">
             <h2>

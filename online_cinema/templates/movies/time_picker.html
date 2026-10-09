@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}
+    Кіно за вільний час - Online Cinema
+{% endblock %}
+
+{% block content %}
+
+<section class="page-header">
+    <h1>🍿Кіно під твій час</h1>
+    <p>
+        Вкажи, скільки маєш вільного часу, а ми підберемо фільм.
+    </p>
+</section>
+
+<section class="time-picker-section">
+    <form method="POST" class="movie-filters">
+        {% csrf_token %}
+
+        <div class="filter-box">
+            <label for="hours">Години:</label>
+            <input type="number" id="hours" name="hours" min="0" max="24" value="{{ hours }}" required>
+
+            <label for="minutes">Хвилини:</label>
+            <select name="minutes" id="minutes">
+                <option value="0" {% if minutes == 0 %} selected {% endif %}>0</option>
+                <option value="15" {% if minutes == 15 %} selected {% endif %}>15</option>
+                <option value="30" {% if minutes == 30 %} selected {% endif %}>30</option>
+                <option value="45" {% if minutes == 45 %} selected {% endif %}>45</option>
+            </select>
+
+            <button type="submit" class="filter-button">
+                {% if movies %}
+                    🎲 Інша добірка
+                {% else %}
+                    🎬 Підібрати фільми
+                {% endif %}
+            </button>
+        </div>
+
+        {% for movie in movies %}
+            <input type="hidden" name="excluded_ids" value="{{ movie.id }}">
+        {% endfor %}
+    </form>
+</section>
+
+{% if error %}
+    <p class="error-message">{{ error }}</p>
+{% endif %}
+
+{% if movies %}
+    <section class="time-picker-results">
+        <h2>Твоя добірка</h2>
+        <p>Доступно: <strong>{{ availble_time_display }}</strong></p>
+        <p>Час перегляду: <strong>{{ used_time_display }}</strong></p>
+        <p>Залишиться вільного часу: <strong>{{ remaining_time_display }}</strong></p>
+
+
+        <div class="movie-grid">
+            {% for movie in movies %}
+                <a href="{% url 'movie_detail' movie.id %}" class="movie-card">
+                    <img src="{{ movie.img_link }}" alt="{{ movie.title }}" class="movie-card-image">
+                    <div class="movie-card-body">
+                        <h3>{{ movie.title }}</h3>
+                        <p>{{ movie.year }}</p>
+                        <p>{{ movie.genre.name }}</p>
+                        <p>⏱ {{ movie.duration_display }}</p>
+                    </div>
+                </a>
+            {% endfor %}
+        </div>
+
+        <form method="POST">
+            {% csrf_token %}
+            <input type="hidden" name="hours" value="{{ hours }}">
+            <input type="hidden" name="minutes" value="{{ minutes }}">
+
+            {% for movie in movies %}
+                <input type="hidden" name="excluded_ids" value="{{ movie.id }}">
+            {% endfor %}
+
+            <button type="submit" class="filter-button">
+                {% if movies %}
+                    🔄 Спробувати ще раз
+                {% endif %}
+            </button>
+        </form>
+    </section>
+
+{% endif %}
+
+{% endblock %}

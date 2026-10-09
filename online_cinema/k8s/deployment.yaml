@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+
+kind: Deployment
+
+metadata:
+  name: online-cinema-web
+
+spec:
+  replicas: 3
+
+  selector:
+    matchLabels:
+      app: online-cinema-web
+
+  template:
+    metadata:
+      labels:
+        app: online-cinema-web
+
+    spec:
+      containers:
+        - name: online-cinema-web
+          image: online-cinema:2.0
+
+          ports:
+            - containerPort: 8000
